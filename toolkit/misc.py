@@ -133,7 +133,7 @@ def create_table_of_instances(real_instances, simulated_instances, drawn_instanc
             (real, simulated and hand-drawn instances) and by instance
             label.
     """
-    # Gets the label's description of all instances as a list of dicts
+    # Obtém a descrição dos rótulos de todas as instâncias em uma lista de dicionários
     list_instances = (
         [
             {
@@ -158,27 +158,34 @@ def create_table_of_instances(real_instances, simulated_instances, drawn_instanc
         ]
     )
 
-    # Transforms the list of dicts into a pandas.DataFrame
+    # Transforma a lista de dicionários em um pandas.DataFrame
     df_instances = pd.DataFrame(list_instances)
 
-    # Creates the table of instances with relevant information and
-    # desired format
-    toi = (
-        df_instances.groupby(["INSTANCE LABEL", "SOURCE"])
-        .size()
-        .reset_index()
-        .pivot("SOURCE", "INSTANCE LABEL", 0)
-        .fillna(0)
-        .astype(int)
-        .T
-    )
+    # Verificação dos dados
+    print("DataFrame antes da agregação:")
+    print(df_instances.head())
+
+    # Usar groupby e unstack para organizar os dados
+    toi = df_instances.groupby(["INSTANCE LABEL", "SOURCE"]).size().unstack(fill_value=0)
+
+    # Verificar o resultado após unstack
+    print("DataFrame após unstack:")
+    print(toi.head())
+
+    # Reorganizar as colunas da tabela de instâncias
     toi = toi.loc[natsorted(toi.index.values)]
-    toi = toi[["REAL", "SIMULATED", "HAND-DRAWN"]]
-    toi["TOTAL"] = toi.sum(axis=1)
-    toi.loc["TOTAL"] = toi.sum(axis=0)
+    expected_columns = ["REAL", "SIMULATED", "HAND-DRAWN"]
+    
+    # Adicionar colunas ausentes com zeros se necessário
+    for col in expected_columns:
+        if col not in toi.columns:
+            toi[col] = 0
+
+    toi = toi[expected_columns]  # Garantir a ordem das colunas
+    toi["TOTAL"] = toi.sum(axis=1)  # Adicionar uma coluna de total
+    toi.loc["TOTAL"] = toi.sum(axis=0)  # Adicionar uma linha de total
 
     return toi
-
 
 def filter_rare_undesirable_events(toi, threshold, simulated=False, drawn=False):
     """Generates a table of instances (pandas.DataFrame) that shows the
